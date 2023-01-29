@@ -1,5 +1,11 @@
 Web VPython 3.2
 
+#background
+scene.autoscale = False
+sphere(pos=vector(0,0,0),texture="https://i.imgur.com/1nVWbbd.jpg",radius=55,shininess=0)
+#scene.range.x = 10
+#scene.range.y = 10
+
 gke = graph(title='<b>Kinetic energies</b>',
       xtitle='<i>t-time</i>', ytitle='<i>Ke-Kinetic energy</i>',
       foreground=color.black, background=color.white)
@@ -11,7 +17,9 @@ total = gcurve(color=color.black,label="total energy")
 
 planets = []
 
-#multiplication for matrix without using np
+# KINEMATICS
+
+# multiplication for matrix without using np
 def matmul(A, B):
     rows_A = len(A)
     cols_A = len(A[0])
@@ -105,6 +113,32 @@ def cal_total_energy(goal_planet, planets, is_ke):
                 total_energy += gpe(goal_planet, planet)
     return total_energy
 
+# COLLISIONS
+def sphere_collisions(sp1, sp2):
+    collision = False
+    
+    # Calculate the distance between centers of two spheres
+    d = sqrt((sp1.pos.x - sp2.pos.x)**2 + (sp1.pos.y - sp2.pos.y)**2 + (sp1.pos.z - sp2.pos.z)**2)
+    
+    if d - (sp1.radius + sp2.radius) > 0:
+        #print("d = " + str(d - (sp1.radius + sp2.radius)))
+        pass
+    else:
+        print("collision")
+        collision = True
+    
+    return collision
+
+def check_all_sphere_colls(spheres_list):
+    collision_check = []
+    
+    for i in range(len(spheres_list)):
+        for j in range(i + 1, len(spheres_list)):
+            temp_col_check = sphere_collisions(spheres_list[i], spheres_list[j])
+            collision_check.append(temp_col_check)
+    
+    return collision_check
+
 #initializing bodies
 sun = sphere( pos=vector(0,0,0), radius=0.08, color=color.yellow,  rotation = vec(0,0,0),
                mass = 2000, velocity = vec(0,0,3), force = vec(0,0,0), make_trail=True, grph=gcurve(color=color.yellow, label="sun KE", graph = gke), texture = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Map_of_the_full_sun.jpg/1280px-Map_of_the_full_sun.jpg" ) # mass is a scaled down mass, velocity is just a ranfom velocity that works well here
@@ -157,7 +191,7 @@ angular_velocity_saturn = vec(0.0012, 0, 0)
 euler_angles_jupiter = [2e-2, 3.13e-7, 2e-7]
 angular_velocity_jupiter = vec(0.0014, 0, 0)
 
-euler_angles_venus = [2e-2, 177.36e-7, 2e-7]
+euler_angles_venus = [-2e-2, 177.36e-7, 2e-7]
 angular_velocity_venus = vec(-0.0001, 0, 0)
 
 euler_angles_mercury = [2e-2, 0, 2e-7]
@@ -171,6 +205,17 @@ t = 0
 total_e = 0
 while (True):
     rate(500)
+    
+    # Check for collisions
+    list_of_collisions = check_all_sphere_colls(planets)
+    happened = False
+    for collision in list_of_collisions:
+        if collision:
+            happened = True
+            break
+    #print(list_of_collisions)
+    if happened:
+        break
     
     # Calculate forces
     total_sun_force = cal_total_force(sun, planets)
