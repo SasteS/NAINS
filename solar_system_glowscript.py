@@ -1,11 +1,12 @@
 Web VPython 3.2
 
-#background
+# Background
 scene.autoscale = False
+scene.width = 1400
+scene.height = 600
 sphere(pos=vector(0,0,0),texture="https://i.imgur.com/1nVWbbd.jpg",radius=55,shininess=0)
-#scene.range.x = 10
-#scene.range.y = 10
 
+# Graphs
 gke = graph(title='<b>Kinetic energies</b>',
       xtitle='<i>t-time</i>', ytitle='<i>Ke-Kinetic energy</i>',
       foreground=color.black, background=color.white)
@@ -55,7 +56,7 @@ def rotation_matrix(euler_angles):
     return matmul(matmul(R_z, R_y), R_x)
    
 def extract_angles(rotation_matrix):
-    # Extracting the angle of rotation from the trace of the rotation matrix
+    # Extracting the angle of rotation from the sum of diagonal elements of the rotation matrix
     angle = acos((R[0][0] + R[1][1] + R[2][2] - 1)/2)  
     # Compute the axis of rotation from the matrix
     rotation_axis = [R[2][1] - R[1][2], R[0][2] - R[2][0], R[1][0] - R[0][1]]
@@ -65,7 +66,7 @@ def extract_angles(rotation_matrix):
  
 def gforce(p1,p2):
     # Calculate the gravitational force exerted on p1 by p2.
-    G = 1 #6.67408e-11# Smaller value of G
+    G = 1
     # Calculate distance vector between p1 and p2.
     r_vec = p1.pos-p2.pos
     # Calculate magnitude of distance vector.
@@ -93,7 +94,7 @@ def ke(p1):
     
 def gpe(p1,p2):
     # Calculate the gravitational potential energy between p1 and p2.
-    G = 1 # Change to 6.67e-11 to use real-world values.
+    G = 1
     # Calculate distance vector between p1 and p2.
     r_vec = p1.pos-p2.pos
     # Calculate magnitude of distance vector.
@@ -114,6 +115,8 @@ def cal_total_energy(goal_planet, planets, is_ke):
     return total_energy
 
 # COLLISIONS
+
+# SPHERES-SPHERES
 def sphere_collisions(sp1, sp2):
     collision = False
     
@@ -132,12 +135,102 @@ def sphere_collisions(sp1, sp2):
 def check_all_sphere_colls(spheres_list):
     collision_check = []
     
-    for i in range(len(spheres_list)):
+    for i in range(len(spheres_list) - 1):
         for j in range(i + 1, len(spheres_list)):
             temp_col_check = sphere_collisions(spheres_list[i], spheres_list[j])
             collision_check.append(temp_col_check)
     
     return collision_check
+
+# SPHERES-POLYHEDRONS
+def calc_vertices(b):
+        vertices = []
+        
+        A = b.pos + vec(-b.size.x/2,-b.size.y/2,b.size.z/2)
+        B = b.pos + vec(b.size.x/2,-b.size.y/2,b.size.z/2)
+        C = b.pos + vec(b.size.x/2,-b.size.y/2,-b.size.z/2)
+        D = b.pos + vec(-b.size.x/2,-b.size.y/2,-b.size.z/2)
+        A1 = b.pos + vec(-b.size.x/2,b.size.y/2,b.size.z/2)
+        B1 = b.pos + vec(b.size.x/2,b.size.y/2,b.size.z/2)
+        C1 = b.pos + vec(b.size.x/2,b.size.y/2,-b.size.z/2)
+        D1 = b.pos + vec(-b.size.x/2,b.size.y/2,-b.size.z/2)
+    
+        vertices.append(A)
+        vertices.append(B)
+        vertices.append(C)
+        vertices.append(D)
+        vertices.append(A1)
+        vertices.append(B1)
+        vertices.append(C1)
+        vertices.append(D1)
+        
+        return vertices
+    
+def calc_faces(vertices):
+    faces = []
+    
+    face0 = [vertices[0], vertices[1], vertices[5], vertices[4]]
+    face1 = [vertices[3], vertices[2], vertices[6], vertices[7]]
+    face2 = [vertices[0], vertices[1], vertices[2], vertices[3]]
+    face3 = [vertices[4], vertices[5], vertices[6], vertices[7]]
+    face4 = [vertices[0], vertices[3], vertices[7], vertices[4]]
+    face5 = [vertices[1], vertices[2], vertices[6], vertices[5]]
+    
+    faces.append(face0)
+    faces.append(face1)
+    faces.append(face2)
+    faces.append(face3)
+    faces.append(face4)
+    faces.append(face5)
+    
+    return faces
+    
+# Calculate projection
+def projection(vertex, normal):
+    return (dot(vertex, normal) / mag(normal))
+    
+def check_collision(b, s):
+    # Define the faces of the polyhedron
+    vertices = calc_vertices(b)
+    #print("vertices = " + str(vertices))
+    
+    faces = calc_faces(vertices)
+    #print("faces = " + str(faces))
+    
+    # Define the normal vectors of the faces
+    normal_vectors = []
+    for face in faces:    
+        v0 = face[1] - face[0]
+        v1 = face[2] - face[0]
+
+        #print("crossed" + str(crossed))
+        normal_vectors.append(cross(v0, v1))
+    
+    #print("normal vectors = " + str(normal_vectors))
+
+    is_collision = True
+    for normal in normal_vectors:
+        min_sep = (float)1000000
+        
+        sphere_min = projection(s.pos, normal) - s.radius
+        sphere_max = projection(s.pos, normal) + s.radius
+       # print(sphere_min, sphere_max)
+        poly_min = 100000000
+        poly_max = (float)(-100000000)
+        for vertex in vertices:
+            #print(projection(vertex, normal))
+            poly_min = min(projection(vertex, normal), poly_min)
+            poly_max = max(projection(vertex, normal), poly_max)
+        
+       # print(poly_min, poly_max)
+        overlap = max(poly_min, sphere_min) - min(poly_max, sphere_max)
+        
+        if overlap > 0:
+            is_collision = False    
+            #print("no collision")
+            break
+        
+    return is_collision
 
 #initializing bodies
 sun = sphere( pos=vector(0,0,0), radius=0.08, color=color.yellow,  rotation = vec(0,0,0),
@@ -159,6 +252,9 @@ venus = sphere( pos=vector(0.72,0,0), radius=0.02, force = vec(0,0,0), color=col
 mercury = sphere( pos=vector(0.39,0,0), radius=0.01, force = vec(0,0,0), color=color.white, rotation = vec(0,0,0),
                mass = 0.055, velocity = vec(0,47.87,0), make_trail=True, grph=gcurve(color=color.white, label="mercury KE", graph = gke), texture = "https://upload.wikimedia.org/wikipedia/commons/9/92/Solarsystemscope_texture_2k_mercury.jpg" )
 
+#asteroid = box( pos=vector(0.8,0,0), size= vec(0.03,0.03,0.03), force = vec(0,0,0), color=color.purple, rotation = vec(0,0,0),
+#               mass = 5e-5, velocity = vec(0,10,0), make_trail=True, grph=gcurve(color=color.white, label="mercury KE", graph = gke), texture = "https://upload.wikimedia.org/wikipedia/commons/9/92/Solarsystemscope_texture_2k_mercury.jpg" )
+
 #adding all planets to list
 planets.append(sun)
 planets.append(earth)
@@ -170,10 +266,23 @@ planets.append(venus)
 planets.append(mercury)
 planets.append(neptune)
 
+# Making many asteroids
+asteroids = []
+m_min = 0.01
+m_max = 0.10
+r_min = 4
+r_max = 9
+for i in range(0,20):
+    mass = m_min + random()*(m_max-m_min)
+    r = r_min + random()*(r_max-r_min)
+    theta = random()*2*pi
+    velocity = mass*sqrt(sun.mass/r)
+    asteroids.append(box(pos=r*vector(cos(theta),sin(theta),random(-3,3)),velocity=velocity*vector(-sin(theta),cos(theta),0),mass=mass, color=color.white, size = vec(0.09,0.09,0.09)))
+
 # Defining euler angles and angular velocities for all the bodies
-# Euler angles (yaw, pitch, roll)
+# Euler angles (roll, pitch, yaw)
 euler_angles_sun = [7e-4, 0, 2e-7] #0.1, 0.2, 0.3
-# Angular velocity of the planet (yaw_dot, pitch_dot, roll_dot)
+# Angular velocity of the planet (roll_dot, pitch_dot, yaw_dot)
 angular_velocity_sun = vec(1.16e-7, 0, 0)
 
 euler_angles_earth = [2e-2, 23.5e-7, 2e-7]
@@ -200,11 +309,11 @@ angular_velocity_mercury = vec(0.0107, 0, 0)
 euler_angles_neptune = [2e-2, 29.6e-7, 2e-7]
 angular_velocity_neptune = vec(0.0007, 0, 0)
 
-dt = 0.00005 # timestep - deltatime
+dt = 0.0001 # timestep - deltatime
 t = 0
 total_e = 0
 while (True):
-    rate(500)
+    rate(5000) #og je 500 a dt je 0.0001
     
     # Check for collisions
     list_of_collisions = check_all_sphere_colls(planets)
@@ -214,6 +323,28 @@ while (True):
             happened = True
             break
     #print(list_of_collisions)
+    if happened:
+        break
+    
+    # Check other collisions
+#    for planet in planets:
+#        check = check_collision(asteroid, planet)
+#        if check:
+#            print("collision")
+#            happened = True
+#            break
+#    if happened:
+#        break
+    
+    for a in asteroids:
+        for planet in planets:
+            check = check_collision(a, planet)
+            if check:
+                print("collision")
+                happened = True
+                break
+        if happened:
+            break
     if happened:
         break
     
@@ -245,6 +376,12 @@ while (True):
     total_neptune_force = cal_total_force(neptune, planets)
     neptune.force = total_neptune_force
     
+#    total_asteroid_force = cal_total_force(asteroid, planets)
+#    asteroid.force = total_asteroid_force
+    
+    for a in asteroids:
+        a.force = cal_total_force(a, planets)
+    
     # Update velocity
     sun.velocity = sun.velocity + sun.force/sun.mass*dt
     earth.velocity = earth.velocity + earth.force/earth.mass*dt
@@ -255,6 +392,9 @@ while (True):
     mercury.velocity = mercury.velocity + mercury.force/mercury.mass*dt
     pluto.velocity = pluto.velocity + pluto.force/pluto.mass*dt
     neptune.velocity = neptune.velocity + neptune.force/neptune.mass*dt
+#    asteroid.velocity = asteroid.velocity + asteroid.force/asteroid.mass*dt
+    for a in asteroids:
+        a.velocity = a.velocity + a.force/a.mass*dt
     
     # Update positions
     sun.pos = sun.pos + sun.velocity*dt
@@ -266,6 +406,9 @@ while (True):
     mercury.pos = mercury.pos + mercury.velocity*dt
     pluto.pos = pluto.pos + pluto.velocity*dt
     neptune.pos = neptune.pos + neptune.velocity*dt
+#    asteroid.pos = asteroid.pos + asteroid.velocity*dt
+    for a in asteroids:
+        a.pos = a.pos + a.velocity*dt
 
     # Update energy graphs
     sun.grph.plot(pos=(t,ke(sun)))
