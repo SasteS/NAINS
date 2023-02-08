@@ -58,9 +58,9 @@ def rotation_matrix(euler_angles):
 def extract_angles(rotation_matrix):
     # Extracting the angle of rotation from the sum of diagonal elements of the rotation matrix
     angle = acos((R[0][0] + R[1][1] + R[2][2] - 1)/2)  
-    # Compute the axis of rotation from the matrix
+    # Compute the axis of rotation from the matrix - gets turned into unit vec
     rotation_axis = [R[2][1] - R[1][2], R[0][2] - R[2][0], R[1][0] - R[0][1]]
-    # normalize the axis
+    # Normalize the axis - basically make it unit vector ex. vec(1,0,1) - we need to know only which axises to update
     axis_normalized = [x/sin(angle) for x in rotation_axis]
     return angle, axis_normalized   
  
@@ -105,11 +105,14 @@ def gpe(p1,p2):
     return gpe
 
 def cal_total_energy(goal_planet, planets, is_ke):
+    # Total energy thats expelled between planets gets calculated
     total_energy = 0
     for planet in planets:
+        # Checks for kinetic energy
         if is_ke:
             total_energy += ke(planet)
         else:
+            # Checks for planet if it is itself
             if goal_planet.mass != planet.mass:
                 total_energy += gpe(goal_planet, planet)
     return total_energy
@@ -123,6 +126,7 @@ def sphere_collisions(sp1, sp2):
     # Calculate the distance between centers of two spheres
     d = sqrt((sp1.pos.x - sp2.pos.x)**2 + (sp1.pos.y - sp2.pos.y)**2 + (sp1.pos.z - sp2.pos.z)**2)
     
+    # Checking for collisions
     if d - (sp1.radius + sp2.radius) > 0:
         #print("d = " + str(d - (sp1.radius + sp2.radius)))
         pass
@@ -135,6 +139,7 @@ def sphere_collisions(sp1, sp2):
 def check_all_sphere_colls(spheres_list):
     collision_check = []
     
+    # Checks for collisions for each and every planet
     for i in range(len(spheres_list) - 1):
         for j in range(i + 1, len(spheres_list)):
             temp_col_check = sphere_collisions(spheres_list[i], spheres_list[j])
@@ -280,9 +285,9 @@ for i in range(0,20):
     asteroids.append(box(pos=r*vector(cos(theta),sin(theta),random(-3,3)),velocity=velocity*vector(-sin(theta),cos(theta),0),mass=mass, color=color.white, size = vec(0.09,0.09,0.09)))
 
 # Defining euler angles and angular velocities for all the bodies
-# Euler angles (roll, pitch, yaw)
+# Euler angles (yaw, pitch, roll)
 euler_angles_sun = [7e-4, 0, 2e-7] #0.1, 0.2, 0.3
-# Angular velocity of the planet (roll_dot, pitch_dot, yaw_dot)
+# Angular velocity of the planet (yaw_dot, pitch_dot, roll_dot)
 angular_velocity_sun = vec(1.16e-7, 0, 0)
 
 euler_angles_earth = [2e-2, 23.5e-7, 2e-7]
